@@ -29,12 +29,12 @@ class IOClass:
 
     def create_data_file(self):
         """ Returns the data xarray """
-    
+
         if (restart==True):
             print('--------------------------------------------------------------')
             print('\t RESTART FROM PREVIOUS STATE')
             print('-------------------------------------------------------------- \n')
-            
+
             # Load the restart file
             timestamp = pd.to_datetime(time_start).strftime('%Y-%m-%dT%H:%M:%S')
             if (os.path.isfile(os.path.join(data_path, 'restart', 'restart_'+timestamp+'.nc')) & (time_start != time_end)):
@@ -42,13 +42,13 @@ class IOClass:
                 self.restart_date = self.GRID_RESTART.time     # Get time of the last calculation
                 self.init_data_dataset()                       # Read data from the last date to the end of the data file
             else:
-                self.logger.error('No restart file available for the given date %s' % (timestamp))  # if there is a problem kill the program
+                self.logger.error(f'No restart file available for the given date {timestamp}')
                 self.logger.error('OR start date %s equals end date %s \n' % (time_start, time_end))
                 sys.exit(1)
         else:
             self.restart_date = None
             self.init_data_dataset()  # If no restart, read data according to the dates defined in the config.py
-        
+
         return self.DATA
 
 
@@ -84,13 +84,13 @@ class IOClass:
         U2          ::   Wind speed (magnitude) [m/s]
         HGT         ::   Elevation [m]
         """
-    
+
         # Open input dataset
         self.DATA = xr.open_dataset(os.path.join(data_path,'input',input_netcdf))
         self.DATA['time'] = np.sort(self.DATA['time'].values)
 
-        start_interval=str(self.DATA.time.values[0])[0:16]
-        end_interval = str(self.DATA.time.values[-1])[0:16]
+        start_interval = str(self.DATA.time.values[0])[:16]
+        end_interval = str(self.DATA.time.values[-1])[:16]
         time_steps = str(len(self.DATA.time))
         print('\n Maximum available time interval from %s until %s. Time steps: %s \n\n' % (start_interval, end_interval, time_steps))
 
@@ -120,12 +120,12 @@ class IOClass:
 
         print('--------------------------------------------------------------')
         print('Checking input data .... \n')
-        
+
         def check(field, max, min):
             '''Check the validity of the input data '''
             if np.nanmax(field) > max or np.nanmin(field) < min:
                 print('Please check the input data, its seems they are out of range %s MAX: %.2f MIN: %.2f \n' % (str.capitalize(field.name), np.nanmax(field), np.nanmin(field)))
-        
+
         if ('T2' in self.DATA):
             print('Temperature data (T2) ... ok ')
             check(self.DATA.T2, 313.16, 243.16)

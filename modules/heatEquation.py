@@ -25,7 +25,7 @@ def solveHeatEquation(GRID, t):
     c_pi = 152.2 + 7.122 * np.mean(GRID.get_temperature())
     # with static specific heat of ice
     # c_pi = 152.2 + 7.122 * spec_heat_ice
-    
+
     # Calculate thermal conductivity [W m-1 K-1] from mean density
     lam = 0.021 + 2.5 * (snowRhoMean/1000.0)**2.0
 
@@ -37,9 +37,9 @@ def solveHeatEquation(GRID, t):
 
     # Check stability criteria for diffusion
     dt_stab = c_stab * (min(hlayers)**2.0) / (K)
-    
+
     while curr_t < t:
-   
+       
         # Get a copy of the GRID temperature profile
         Ttmp = np.copy(GRID.get_temperature())
 
@@ -49,7 +49,7 @@ def solveHeatEquation(GRID, t):
             # Grid spacing            
             hk = ((hlayers[idxNode]/2.0)+(hlayers[idxNode-1]/2.0))
             hk1 = ((hlayers[idxNode+1]/2.0)+(hlayers[idxNode]/2.0))
-            
+
             # Lagrange coeffiecients
             ak = 2.0 / (hk*(hk+hk1))
             bk = -2.0 / (hk*hk1)
@@ -66,6 +66,6 @@ def solveHeatEquation(GRID, t):
             GRID.set_node_temperature(idxNode, Tnew)
 
         # Add the time step to current time
-        curr_t = curr_t + dt_use
-    
+        curr_t += dt_use
+
     return c_pi

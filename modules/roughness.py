@@ -3,14 +3,9 @@ import sys
 
 def updateRoughness(GRID, evdiff):
 
-    if roughness_method == 'Moelg12':
-        sigma = method_Moelg(GRID, evdiff)
-
-    else:
+    if roughness_method != 'Moelg12':
         print('Roughness parameterisation ', roughness_method, ' not available using default')
-        sigma = method_Moelg(GRID, evdiff)
-
-    return sigma
+    return method_Moelg(GRID, evdiff)
 
 def method_Moelg(GRID, evdiff):
 

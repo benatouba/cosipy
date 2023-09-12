@@ -24,7 +24,7 @@ def create_input(cs_file, cosipy_file, static_file, start_date, end_date):
 
     print('-------------------------------------------')
     print('Create input \n')
-    print('Read input file %s' % (cs_file))
+    print(f'Read input file {cs_file}')
 
     # Read data
     date_parser = lambda x: dateutil.parser.parse(x, ignoretz=True)

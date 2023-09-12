@@ -79,20 +79,15 @@ def cosipy_core(DATA, GRID_RESTART=None):
         LWin = None
         N = DATA.N.values
 
-    if ('SLOPE' in DATA):
-        SLOPE = DATA.SLOPE.values
-
-    else:
-        SLOPE = 0.0
-
+    SLOPE = DATA.SLOPE.values if ('SLOPE' in DATA) else 0.0
     # Profiling with bokeh
     cp = cProfile.Profile()
-    
+
     #--------------------------------------------
     # TIME LOOP 
     #--------------------------------------------
     logger.debug('Start time loop')
-    
+
     for t in np.arange(len(DATA.time)):
 
         if (SNOWF is not None):
@@ -102,9 +97,7 @@ def cosipy_core(DATA, GRID_RESTART=None):
         else:
         # Rainfall is given as mm, so we convert to m snowheight
             SNOWFALL = (RRR[t]/1000.0)*(ice_density/density_fresh_snow)*(0.5*(-np.tanh(((T2[t]-zero_temperature)-2.5)*2.5)+1))
-            if SNOWFALL<0.0:        
-                SNOWFALL = 0.0
-
+            SNOWFALL = max(SNOWFALL, 0.0)
         if SNOWFALL > 0.0:
             # Add a new snow node on top
             GRID.add_node(SNOWFALL, density_fresh_snow, float(T2[t]), 0.0, 0.0, 0.0, 0.0, 0.0)
@@ -154,7 +147,7 @@ def cosipy_core(DATA, GRID_RESTART=None):
             fun, surface_temperature, lw_radiation_in, lw_radiation_out, sensible_heat_flux, latent_heat_flux, \
                 ground_heat_flux, sw_radiation_net, rho, Lv, Cs, q0, q2, qdiff, phi \
                 = update_surface_temperature(GRID, alpha, z0, T2[t], RH2[t], PRES[t], G_temp, U2[t], SLOPE, N=N[t])
-        
+
         # Surface fluxes [m w.e.q.]
         if surface_temperature < zero_temperature:
             sublimation = max(latent_heat_flux / (1000.0 * lat_heat_sublimation), 0) * dt
@@ -182,7 +175,7 @@ def cosipy_core(DATA, GRID_RESTART=None):
 
         # Percolation/Refreezing
         Q, water_refreezed, LWCchange  = percolation(GRID, melt, dt, debug_level)
-        
+
         # Write results
         logger.debug('Write data into local result structure')
 
@@ -218,8 +211,8 @@ def cosipy_core(DATA, GRID_RESTART=None):
         RESULT.DEPOSITION[t] = deposition
         RESULT.surfM[t] = melt
         RESULT.subM[t] = subsurface_melt
-        RESULT.Q[t] = Q 
-        RESULT.REFREEZE[t] = water_refreezed 
+        RESULT.Q[t] = Q
+        RESULT.REFREEZE[t] = water_refreezed
         RESULT.SNOWHEIGHT[t] = GRID.get_total_snowheight()
         RESULT.TOTALHEIGHT[t] = GRID.get_total_height()
         RESULT.TS[t] = surface_temperature
@@ -243,14 +236,14 @@ def cosipy_core(DATA, GRID_RESTART=None):
     # TODO Restart
     logger.debug('Write restart data into local restart structure')
     RESTART['NLAYERS'] = GRID.get_number_layers()
-    RESTART.LAYER_HEIGHT[0:GRID.get_number_layers()] = GRID.get_height() 
-    RESTART.LAYER_RHO[0:GRID.get_number_layers()] = GRID.get_density() 
-    RESTART.LAYER_T[0:GRID.get_number_layers()] = GRID.get_temperature() 
-    RESTART.LAYER_LWC[0:GRID.get_number_layers()] = GRID.get_liquid_water_content() 
-    RESTART.LAYER_CC[0:GRID.get_number_layers()] = GRID.get_cold_content() 
-    RESTART.LAYER_POROSITY[0:GRID.get_number_layers()] = GRID.get_porosity() 
-    RESTART.LAYER_VOL[0:GRID.get_number_layers()] = GRID.get_max_vol_ice_content() 
-    RESTART.LAYER_REFREEZE[0:GRID.get_number_layers()] = GRID.get_refreeze() 
+    RESTART.LAYER_HEIGHT[:GRID.get_number_layers()] = GRID.get_height()
+    RESTART.LAYER_RHO[:GRID.get_number_layers()] = GRID.get_density()
+    RESTART.LAYER_T[:GRID.get_number_layers()] = GRID.get_temperature()
+    RESTART.LAYER_LWC[:GRID.get_number_layers()] = GRID.get_liquid_water_content()
+    RESTART.LAYER_CC[:GRID.get_number_layers()] = GRID.get_cold_content()
+    RESTART.LAYER_POROSITY[:GRID.get_number_layers()] = GRID.get_porosity()
+    RESTART.LAYER_VOL[:GRID.get_number_layers()] = GRID.get_max_vol_ice_content()
+    RESTART.LAYER_REFREEZE[:GRID.get_number_layers()] = GRID.get_refreeze() 
 
     # Return results
     return RESULT, RESTART

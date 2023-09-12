@@ -5,12 +5,9 @@ import sys
 
 def penetrating_radiation(GRID, SWnet, dt):
 
-    if penetrating_method == 'Bintanja95':
-        subsurface_melt, Si = method_Bintanja(GRID, SWnet, dt)
-
-    else:
+    if penetrating_method != 'Bintanja95':
         print('Penetrating radiation parameterisation ', penetrating_method, ' not available, using default')
-        subsurface_melt, Si = method_Bintanja(GRID, SWnet, dt)
+    subsurface_melt, Si = method_Bintanja(GRID, SWnet, dt)
 
     return subsurface_melt, Si
 

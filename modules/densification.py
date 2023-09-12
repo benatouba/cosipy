@@ -8,12 +8,9 @@ def densification(GRID,SLOPE):
         GRID    ::  GRID-Structure
     """
 
-    if densification_method == 'Herron80':
-        method_Herron(GRID,SLOPE)
-
-    else:
+    if densification_method != 'Herron80':
         print('ERROR: Densification parameterisation ', densification_method, ' not available, using defaul')
-        method_Herron(GRID,SLOPE)
+    method_Herron(GRID,SLOPE)
 
 def method_Herron(GRID,SLOPE):
     # % Description: Densification through overburden pressure
@@ -32,7 +29,7 @@ def method_Herron(GRID,SLOPE):
         if idxNode == 0:
             weight = (GRID.get_node_height(idxNode) * 0.5 * GRID.get_node_density(idxNode))
         else:
-            weight = (np.nansum(height_layers[0:idxNode] * density_temp[0:idxNode]))
+            weight = np.nansum(height_layers[:idxNode] * density_temp[:idxNode])
 
         weight *= np.cos(np.radians(SLOPE))
 

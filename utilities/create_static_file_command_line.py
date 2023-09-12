@@ -2,6 +2,7 @@
  This file reads the DEM of the study site and the shapefile and creates the needed static.nc
 """
 
+
 import xarray as xr
 import numpy as np
 import netCDF4
@@ -9,9 +10,9 @@ import os
 
 static_folder = '../data/static/'
 
-dem_path_tif_to_shrink = static_folder + 'Rofental_DEM.tif'
-dem_path_tif = static_folder + 'Hintereisferner_DEM.tif'
-shape_path = static_folder + 'HEF_Flaeche2018.shp'
+dem_path_tif_to_shrink = f'{static_folder}Rofental_DEM.tif'
+dem_path_tif = f'{static_folder}Hintereisferner_DEM.tif'
+shape_path = f'{static_folder}HEF_Flaeche2018.shp'
 
 ### for shrinking the input DEM file to a smaller DEM
 longitude_upper_left = '10.72'
@@ -20,24 +21,28 @@ longitude_lower_right = '10.795'
 latitude_lower_right = '46.78'
 
 aggregate_degree = '0.0035'
-dem_path_tif_aggregate = static_folder + 'Hintereisferner_DEM_'+aggregate_degree+'.tif'
+dem_path_tif_aggregate = (
+    f'{static_folder}Hintereisferner_DEM_{aggregate_degree}.tif'
+)
 
 ### intermediate files
-dem_path = static_folder + 'dem.nc'
-aspect_path = static_folder + 'aspect.nc'
-mask_path = static_folder + 'mask.nc'
-slope_path = static_folder + 'slope.nc'
+dem_path = f'{static_folder}dem.nc'
+aspect_path = f'{static_folder}aspect.nc'
+mask_path = f'{static_folder}mask.nc'
+slope_path = f'{static_folder}slope.nc'
 
 ### path were the static.nc file is saved
-output_path = static_folder + 'static.nc'
+output_path = f'{static_folder}static.nc'
 
-#os.system('gdal_translate -r cubicspline -projwin ' + longitude_upper_left + ' ' + latitude_upper_left + ' ' +
-          #longitude_lower_right + ' ' + latitude_lower_right + ' ' + dem_path_tif_to_shrink + ' ' + dem_path_tif)
-os.system('gdalwarp -tr ' + aggregate_degree + ' ' + aggregate_degree + ' -r average ' + dem_path_tif + ' ' + dem_path_tif_aggregate)
-os.system('gdal_translate -of NETCDF ' + dem_path_tif  + ' ' + dem_path)
-os.system('gdaldem slope -of NETCDF ' + dem_path + ' ' + slope_path + ' -s 111120')
-os.system('gdaldem aspect -of NETCDF ' + dem_path + ' ' + aspect_path)
-os.system('gdalwarp -of NETCDF  --config GDALWARP_IGNORE_BAD_CUTLINE YES -cutline ' + shape_path + ' ' + dem_path_tif  + ' ' + mask_path)
+os.system(
+    f'gdalwarp -tr {aggregate_degree} {aggregate_degree} -r average {dem_path_tif} {dem_path_tif_aggregate}'
+)
+os.system(f'gdal_translate -of NETCDF {dem_path_tif} {dem_path}')
+os.system(f'gdaldem slope -of NETCDF {dem_path} {slope_path} -s 111120')
+os.system(f'gdaldem aspect -of NETCDF {dem_path} {aspect_path}')
+os.system(
+    f'gdalwarp -of NETCDF  --config GDALWARP_IGNORE_BAD_CUTLINE YES -cutline {shape_path} {dem_path_tif} {mask_path}'
+)
 #os.system('gdalwarp -of NETCDF -cutline ' + shape_path + ' ' + dem_path_tif + ' ' + mask_path)
 
 dem = xr.open_dataset(dem_path)
@@ -73,6 +78,6 @@ insert_var(ds, slope.Band1.values,'SLOPE','degress','Terrain slope')
 insert_var(ds, mask,'MASK','boolean','Glacier mask')
 
 ds.to_netcdf(output_path)
-os.system('rm '+ dem_path + ' ' + aspect_path + ' ' + mask_path + ' ' + slope_path)
+os.system(f'rm {dem_path} {aspect_path} {mask_path} {slope_path}')
 
 print("Study area consists of ", np.nansum(mask[mask==1]), " glacier points")

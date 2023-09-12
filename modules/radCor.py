@@ -73,21 +73,20 @@ def Fdif_Neustift(doy, zeni, Rg):
      last edit: 23.04.2018, Georg
     """
     So = 1367.0 * (1 + 0.033 * math.cos(2.0 * math.pi * doy / 366.0)) * math.cos(zeni)
-    
+
     CI = Rg / So
-    
+
     # empirical parameters from Wohlfahrt et al. (2016) (Appendix C)
     p1 = 0.1001
     p2 = 4.7930
     p3 = 9.4758
     p4 = 0.2465
 
-    if (CI>50):
-        Fdif = p4
-    else:
-        # Eq. C1 in Wohlfahrt et al. (2016)
-        Fdif = math.exp(-math.exp(p1 - (p2 - p3 * CI))) * (1.0 - p4) + p4
-    return Fdif
+    return (
+        p4
+        if (CI > 50)
+        else math.exp(-math.exp(p1 - (p2 - p3 * CI))) * (1.0 - p4) + p4
+    )
 
 
 def radCor2D(doy, zeni, azi, angslo, azislo, Rm, zeni_thld):
@@ -122,26 +121,22 @@ def radCor2D(doy, zeni, azi, angslo, azislo, Rm, zeni_thld):
     Fdif = Fdif_Neustift(doy, zeni, Rm)
     if (zeni > math.radians(zeni_thld)):
         Fdif = 1.0
-    
+
     # Split measured global radiation into beam and diffuse part
     Rb = Rm * (1.0 - Fdif)  # Beam radiation
     Rd = Rm * Fdif          # Diffuse radiation
 
     # Correct beam component for angle and azimuth of pixels
     cf = (math.cos(zeni) * math.cos(angslo / 180.0 * math.pi) + math.sin(zeni) * \
-          math.sin(angslo / 180.0 * math.pi) * math.cos(azi-azislo / 180.0 * math.pi)) / math.cos(zeni) 
+          math.sin(angslo / 180.0 * math.pi) * math.cos(azi-azislo / 180.0 * math.pi)) / math.cos(zeni)
     cf = (math.cos(zeni) * math.cos((angslo*math.pi) / 180.0) + math.sin(zeni) * \
           math.sin((angslo*math.pi) / 180.0) * math.cos(((azi-azislo)*math.pi) / 180.0)) / math.cos(zeni) 
-    
-    Rc = Rb * cf + Rd
-    
-    return Rc
+
+    return Rb * cf + Rd
 
 
 def correctRadiation(lat, lon, timezone_lon, doy, hour, angslo, azislo, Rm, zeni_thld):
 
     beta, zeni, azi = solarFParallel(lat, lon, timezone_lon, doy, hour)
-    Rc = radCor2D(doy, zeni, azi, angslo, azislo, Rm, zeni_thld)
-
-    return Rc
+    return radCor2D(doy, zeni, azi, angslo, azislo, Rm, zeni_thld)
 

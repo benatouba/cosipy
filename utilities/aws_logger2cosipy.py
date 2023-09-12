@@ -22,20 +22,20 @@ def create_input(cs_file, cosipy_file, static_file, start_date, end_date):
 
     print('-------------------------------------------')
     print('Create input \n')
-    print('Read input file %s' % (cs_file))
+    print(f'Read input file {cs_file}')
 
     # Read Im Hinteren Eis Logger data
     df = pd.read_csv(cs_file,
        delimiter=',', index_col=['TIMESTAMP'],
         parse_dates=['TIMESTAMP'], na_values='NAN', skiprows=[0, 2, 3])
-    
-    df[T2_var] = df[T2_var].apply(pd.to_numeric, errors='coerce')    
-    df[RH2_var] = df[RH2_var].apply(pd.to_numeric, errors='coerce')    
-    df[U2_var] = df[U2_var].apply(pd.to_numeric, errors='coerce')    
-    df[G_var] = df[G_var].apply(pd.to_numeric, errors='coerce')    
-    df[PRES_var] = df[PRES_var].apply(pd.to_numeric, errors='coerce')    
+
+    df[T2_var] = df[T2_var].apply(pd.to_numeric, errors='coerce')
+    df[RH2_var] = df[RH2_var].apply(pd.to_numeric, errors='coerce')
+    df[U2_var] = df[U2_var].apply(pd.to_numeric, errors='coerce')
+    df[G_var] = df[G_var].apply(pd.to_numeric, errors='coerce')
+    df[PRES_var] = df[PRES_var].apply(pd.to_numeric, errors='coerce')
     df[RRR_var] = df[RRR_var].apply(pd.to_numeric, errors='coerce')    
-    
+
     if(PRES_var not in df):
         df[PRES_var] = 660.00
 
@@ -48,7 +48,7 @@ def create_input(cs_file, cosipy_file, static_file, start_date, end_date):
 
     if(LWin_var in df):
         df[LWin_var] = df[LWin_var].apply(pd.to_numeric, errors='coerce')    
-    
+
     # Select time slice
     df = df.loc[start_date:end_date]
 
@@ -56,7 +56,7 @@ def create_input(cs_file, cosipy_file, static_file, start_date, end_date):
         df = df.resample('H').agg({PRES_var:'mean', T2_var:'mean', N_var:'mean', RH2_var:'mean',
         G_var:'mean', RRR_var:'sum', U2_var:'mean', LWin_var:'mean'})
 
-    elif LWin_var in df and N_var not in df:
+    elif LWin_var in df:
         df = df.resample('H').agg({PRES_var:'mean', T2_var:'mean', RH2_var:'mean',
         G_var:'mean', RRR_var:'sum', U2_var:'mean', LWin_var:'mean'})
 
@@ -76,7 +76,7 @@ def create_input(cs_file, cosipy_file, static_file, start_date, end_date):
     RRR = df[RRR_var]    # Precipitation
     G = df[G_var]        # Incoming shortwave radiation
     P = df[PRES_var]        # Pressure
-    
+
     # Create data arrays for the 2D fields
     T_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
     RH_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
@@ -84,48 +84,48 @@ def create_input(cs_file, cosipy_file, static_file, start_date, end_date):
     U_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
     G_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
     P_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
-    
-    if(LWin_var in df and N_var in df):
+
+    if (LWin_var in df and N_var in df):
         LW = df[LWin_var]      # Incoming longwave radiation
         LW_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
         N = df[N_var]        # Cloud cover fraction
         N_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
-    elif(LWin_var in df and N_var not in df):
+    elif LWin_var in df:
         LW = df[LWin_var]      # Incoming longwave radiation
         LW_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
     else:
         LW_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
         N_interp = np.zeros([len(ds.time), len(ds.lat), len(ds.lon)])
- 
+
     print('Interpolate CR file to grid')
     # Interpolate data (T, RH, RRR, U)  to grid using lapse rates
     for t in range(len(ds.time)):
-        T_interp[t,:,:] = (T2[t]+273.16) + (ds.HGT.values-stationAlt)*lapse_T 
-        RH_interp[t,:,:] = RH2[t] + (ds.HGT.values-stationAlt)*lapse_RH 
-        RRR_interp[t,:,:] = RRR[t]  
+        T_interp[t,:,:] = (T2[t]+273.16) + (ds.HGT.values-stationAlt)*lapse_T
+        RH_interp[t,:,:] = RH2[t] + (ds.HGT.values-stationAlt)*lapse_RH
+        RRR_interp[t,:,:] = RRR[t]
         U_interp[t,:,:] = U2[t] 
-       
+
         # Interpolate pressure using the barometric equation 
         SLP = P[t]/np.power((1-(0.0065*stationAlt)/(288.15)), 5.255)
         P_interp[t,:,:] = SLP * np.power((1-(0.0065*ds.HGT.values)/(288.15)), 5.255)
-         
-        if(LWin_var in df and N_var in df):
+
+        if (LWin_var in df and N_var in df):
             LW_interp[t,:,:] = LW[t] 
             N_interp[t,:,:] = N[t]
-        elif(LWin_var in df and N_var not in df):
-            LW_interp[t,:,:] = LW[t] 
+        elif LWin_var in df:
+            LW_interp[t,:,:] = LW[t]
         else:
             N_interp[t,:,:] = N[t]
 
     # Change aspect to south==0, east==negative, west==positive
     ds['ASPECT'] = np.mod(ds['ASPECT']+180.0, 360.0)
-    mask = ds['ASPECT'].where(ds['ASPECT']<=180.0) 
+    mask = ds['ASPECT'].where(ds['ASPECT']<=180.0)
     aspect = ds['ASPECT'].values
     aspect[aspect<180] = aspect[aspect<180]*-1.0
     aspect[aspect>=180] = 360.0 - aspect[aspect>=180]
     ds['ASPECT'] = (('lat','lon'),aspect)
     print(np.count_nonzero(~np.isnan(ds['MASK'].values)))
-    
+
     # Auxiliary variables
     mask = ds.MASK.values
     slope = ds.SLOPE.values
@@ -133,7 +133,7 @@ def create_input(cs_file, cosipy_file, static_file, start_date, end_date):
     lats = ds.lat.values
     lons = ds.lon.values
     sw = G.values
-   
+
     if radiationModule:
         print('Run the radiation module')
     else:
@@ -161,17 +161,17 @@ def create_input(cs_file, cosipy_file, static_file, start_date, end_date):
     add_variable_2D(ds, U_interp, 'U2', 'm s\u207b\xb9', 'Wind velocity at 2 m')
     add_variable_2D(ds, G_interp, 'G', 'W m\u207b\xb2', 'Incoming shortwave radiation')
     add_variable_2D(ds, P_interp, 'PRES', 'hPa', 'Atmospheric Pressure')
-        
-    if(LWin_var in df and N_var in df):
+
+    if (LWin_var in df and N_var in df):
         add_variable_2D(ds, LW_interp, 'LWin', 'W m\u207b\xb2', 'Incoming longwave radiation')
         add_variable_2D(ds, N_interp, 'N', '%', 'Cloud cover fraction')
-    elif(LWin_var in df and N_var not in df):
+    elif LWin_var in df:
         add_variable_2D(ds, LW_interp, 'LWin', 'W m^-2', 'Incoming longwave radiation')
     else:
         add_variable_2D(ds, N_interp, 'N', '%', 'Cloud cover fraction')
 
     ds.to_netcdf(cosipy_file)
-    
+
     print('Input file created \n')
     print('-------------------------------------------')
 
@@ -182,10 +182,10 @@ def create_input(cs_file, cosipy_file, static_file, start_date, end_date):
     check(ds.U2,50.0,0.0)
     check(ds.G,1600.0,0.0)
     check(ds.PRES,1080.0,200.0)
-    if(LWin_var in df and N_var in df):
+    if (LWin_var in df and N_var in df):
         check(ds.LWin,400.0,200.0)
         check(ds.N,1.0,0.0)
-    elif(LWin_var in df and N_var not in df):
+    elif LWin_var in df:
         check(ds.LWin,400.0,200.0)
     else:
         check(ds.N,1.0,0.0)

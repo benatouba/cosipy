@@ -6,21 +6,13 @@ import sys
 
 def energy_balance(x, GRID, SWnet, rho, Cs, T2, u2, q2, p, Li, phi, lam, SLOPE):
 
-    if x >= zero_temperature:
-        Lv = lat_heat_vaporize
-    else:
-        Lv = lat_heat_sublimation
-
+    Lv = lat_heat_vaporize if x >= zero_temperature else lat_heat_sublimation
     # Saturation vapour pressure at the surface
-    if saturation_water_vapour_method == 'Sonntag90':
-
-        Ew0 = method_EW_Sonntag(x)
-
-    else:
+    if saturation_water_vapour_method != 'Sonntag90':
         print('Method for saturation water vapour ', saturation_water_vapour_method,
               ' not availalbe using default method, using default')
 
-        Ew0 = method_EW_Sonntag(x)
+    Ew0 = method_EW_Sonntag(x)
 
     # if x>=zero_temperature:
     #     Ew0 = 6.1078 * np.exp((17.269388*(x-273.16)) / ((x-35.86)))
@@ -46,7 +38,7 @@ def energy_balance(x, GRID, SWnet, rho, Cs, T2, u2, q2, p, Li, phi, lam, SLOPE):
     # Ground heat flux
     B = -lam * ((2.0 * GRID.get_node_temperature(1) - (0.5 * ((3.0 * x) + GRID.get_node_temperature(2)))) /\
                (GRID.get_node_height(0)))
-    
+
     # Return residual of energy balance
     return np.abs(SWnet+Li+Lo-H-L-B)
 
@@ -55,12 +47,9 @@ def update_surface_temperature(GRID, alpha, z0, T2, rH2, p, G, u2, SLOPE, LWin=N
        """
     # Saturation vapour pressure (hPa)
 
-    if saturation_water_vapour_method == 'Sonntag90':
-        Ew = method_EW_Sonntag(T2)
-    else:
+    if saturation_water_vapour_method != 'Sonntag90':
         print('Method for saturation water vapour ', saturation_water_vapour_method, ' not available, using default')
-        Ew = method_EW_Sonntag(T2)
-
+    Ew = method_EW_Sonntag(T2)
     # if T2>=zero_temperature:
     #    Ew = 6.1078 * np.exp((17.269388*(T2-273.16)) / ((T2-35.86)))
     # else:
@@ -84,7 +73,7 @@ def update_surface_temperature(GRID, alpha, z0, T2, rH2, p, G, u2, SLOPE, LWin=N
 
     # Mixing Ratio at 2 m or calculate with other formula? 0.622*e/p = q
     q2 = (rH2 * 0.622 * (Ew / (p - Ew))) / 100.0
-    
+
     # Air density 
     rho = (p*100.0) / (287.058 * (T2 * (1 + 0.608 * q2)))
 
@@ -93,7 +82,7 @@ def update_surface_temperature(GRID, alpha, z0, T2, rH2, p, G, u2, SLOPE, LWin=N
         Ri = (9.81 * (T2 - zero_temperature) * 2.0) / (T2 * np.power(u2, 2))
     else:
         Ri = 0
-    
+
     # Stability correction
     if (Ri > 0.01) & (Ri <= 0.2):
         phi = np.power(1-5*Ri,2)
@@ -101,7 +90,7 @@ def update_surface_temperature(GRID, alpha, z0, T2, rH2, p, G, u2, SLOPE, LWin=N
         phi = 0
     else:
         phi = 1
-    
+
     # Total net shortwave radiation
     SWnet = G * (1-alpha)
 
@@ -117,18 +106,14 @@ def update_surface_temperature(GRID, alpha, z0, T2, rH2, p, G, u2, SLOPE, LWin=N
 
     # Calculate thermal conductivity [W m-1 K-1] from mean density
     lam = 0.021 + 2.5 * (snowRhoMean/1000.0)**2.0
-   
+
     res = minimize(energy_balance, GRID.get_node_temperature(0), method='L-BFGS-B', bounds=((240.0, 273.16),),
                    tol=1e-8, args=(GRID, SWnet, rho, Cs, T2, u2, q2, p, Li, phi, lam, SLOPE))
- 
+
     # Set surface temperature
     GRID.set_node_temperature(0, float(res.x))
 
-    if res.x >= zero_temperature:
-        Lv = lat_heat_vaporize
-    else:
-        Lv = lat_heat_sublimation
-
+    Lv = lat_heat_vaporize if res.x >= zero_temperature else lat_heat_sublimation
     # Sensible heat flux
     H = rho * spec_heat_air * Cs * u2 * (res.x - T2) * phi * np.cos(np.radians(SLOPE))
 
@@ -156,5 +141,4 @@ def update_surface_temperature(GRID, alpha, z0, T2, rH2, p, G, u2, SLOPE, LWin=N
     return res.fun, float(res.x), float(Li), float(Lo), float(H), float(L), float(B), float(SWnet), rho, Lv, Cs, q0, q2, qdiff, phi
 
 def method_EW_Sonntag(Temp):
-    Ew = 6.112 * np.exp((17.67*(Temp-273.16)) / ((Temp-29.66)))
-    return Ew
+    return 6.112 * np.exp((17.67*(Temp-273.16)) / ((Temp-29.66)))

@@ -28,10 +28,10 @@ def percolation(GRID, water, t, debug_level):
 
     # set liquid water content of top layer (idx, LWCnew) in m
     GRID.set_node_liquid_water_content(0, GRID.get_node_liquid_water_content(0)+float(water))
-    
+
     # Percolation velocity
     pvel = percolation_velocity
-    
+
     # upwind scheme to adapt liquid water content of entire GRID
     while curr_t < t:
 
@@ -57,7 +57,7 @@ def percolation(GRID, water, t, debug_level):
 
             # Set porosity
             GRID.set_node_porosity(idxNode, 1-((GRID.get_node_density(idxNode)-theta_ret*(water_density))/ice_density))
-    
+
             # Set maximum volumetic ice content
             GRID.set_node_max_vol_ice_content(idxNode, theta_ret)
 
@@ -71,7 +71,7 @@ def percolation(GRID, water, t, debug_level):
                 GRID.set_node_liquid_water_content(idxNode, LWCtmp[idxNode] + dt_use * (ux * pvel + uy * pvel))
 
             elif (idxNode==GRID.number_nodes-1):
-                
+
                 xu = LWCtmp[idxNode-1] * (1-GRID.get_node_max_vol_ice_content(idxNode))
                 x = LWCtmp[idxNode] * (1-GRID.get_node_max_vol_ice_content(idxNode))
                 dx = np.abs((GRID.get_node_height(idxNode-1) / 2.0) + (GRID.get_node_height(idxNode) / 2.0))
@@ -82,7 +82,7 @@ def percolation(GRID, water, t, debug_level):
 
             else:
                 # Percolation of water exceeding the max. retention
-                
+
                 xu = LWCtmp[idxNode-1] * (1-GRID.get_node_max_vol_ice_content(idxNode))
                 x = LWCtmp[idxNode] * (1-GRID.get_node_max_vol_ice_content(idxNode))
                 xd = LWCtmp[idxNode+1] * (1-GRID.get_node_max_vol_ice_content(idxNode))
@@ -91,7 +91,7 @@ def percolation(GRID, water, t, debug_level):
 
                 ux = (xu-x)/dx1 
                 uy = (xd-x)/dx2
-                
+
                 # Calculate runoff in m w.e.q
                 if ((GRID.get_node_density(idxNode+1)>=snow_ice_threshold)):
                     Q = Q + dt_use*(uy*pvel)
@@ -99,16 +99,16 @@ def percolation(GRID, water, t, debug_level):
                     break
                 else:
                     GRID.set_node_liquid_water_content(idxNode, LWCtmp[idxNode] + dt_use * (ux * pvel + uy * pvel))
-                    
+
         # Add the time step to current time
-        curr_t = curr_t + dt_use
- 
+        curr_t += dt_use
+
     # Changes in LWC
     LWCchange = np.sum(LWCtmp) - np.sum(GRID.get_liquid_water_content())
 
     # Do the refreezing after percolation
     water_refreezed = refreeze(GRID)
-    
+
     return -Q, water_refreezed, LWCchange
 
 

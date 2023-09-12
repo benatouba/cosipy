@@ -66,10 +66,19 @@ class Grid:
         self.grid = []
 
         # Fill the list with node instances and fill it with user defined data
-        for idxNode in range(self.number_nodes):
-            self.grid.append(Node(self.layer_heights[idxNode], self.layer_densities[idxNode],
-                        self.layer_temperatures[idxNode], self.liquid_water_contents[idxNode], self.cold_contents[idxNode], self.porosity[idxNode], 
-                        self.max_vol_ice_content[idxNode], self.refreeze[idxNode]))
+        self.grid.extend(
+            Node(
+                self.layer_heights[idxNode],
+                self.layer_densities[idxNode],
+                self.layer_temperatures[idxNode],
+                self.liquid_water_contents[idxNode],
+                self.cold_contents[idxNode],
+                self.porosity[idxNode],
+                self.max_vol_ice_content[idxNode],
+                self.refreeze[idxNode],
+            )
+            for idxNode in range(self.number_nodes)
+        )
 
 
 
@@ -101,9 +110,7 @@ class Grid:
         self.logger.debug('Remove node')
 
         # Remove node from list when there is at least one node
-        if not self.grid:
-            pass
-        else:
+        if self.grid:
             if pos is None:
                 self.grid.pop(0)
             else:
@@ -168,7 +175,7 @@ class Grid:
         #---------------------
         # Merging 
         #---------------------
-        
+
         # Auxilary variables
         idx = 1 #self.number_nodes - 1
         num_of_merging = 0
@@ -187,20 +194,20 @@ class Grid:
 
                 # Add up height of the two layer
                 new_height = self.grid[idx].get_layer_height() + self.grid[idx - 1].get_layer_height()
-                
+
                 # Get the new density, weighted by the layer heights
                 new_density = (self.grid[idx].get_layer_height() / total_height) * self.grid[idx].get_layer_density() + \
-                          (self.grid[idx-1].get_layer_height() / total_height) * self.grid[idx - 1].get_layer_density()
+                              (self.grid[idx-1].get_layer_height() / total_height) * self.grid[idx - 1].get_layer_density()
 
                 # First calculate total energy
                 new_total_energy = (self.grid[idx].get_layer_height() * spec_heat_ice *
                                     self.grid[idx].get_layer_density() * self.grid[idx].get_layer_temperature()) + \
-                                   (self.grid[idx-1].get_layer_height() * spec_heat_ice *
+                                       (self.grid[idx-1].get_layer_height() * spec_heat_ice *
                                     self.grid[idx - 1].get_layer_density() * self.grid[idx - 1].get_layer_temperature())
-                
+
                 # Convert total energy to temperature according to the new density
                 new_temperature = new_total_energy/(spec_heat_ice*new_density*new_height)
-                   
+
                 # Todo: CHECK IF RIGHT!!!!!
                 new_liquid_water_content = self.grid[idx].get_layer_liquid_water_content() + self.grid[idx].get_layer_liquid_water_content()
 
@@ -209,15 +216,13 @@ class Grid:
 
                 # Remove the second layer
                 self.remove_node([idx-1])
-           
-                # Move to next layer 
-                idx += 1
+
                 #idx -= 1
 
 
                 # Stop merging if maximal number is reached
                 num_of_merging += 1
-                
+
                 if num_of_merging == merge_max:
                     merge_bool = False
 
@@ -225,48 +230,40 @@ class Grid:
                 self.logger.debug("Merging (update_grid)....")
                 self.grid_info()
                 self.logger.debug("End merging .... \n")
-            
-            else:
 
-                # Stop merging process, if iterated over entire grid
-                #idx -= 1
-                idx += 1
-
+            # Move to next layer 
+            idx += 1
             if idx == self.number_nodes-1: #0:
                 merge_bool = False
-            
+
         #---------------------
         # Splitting
         #---------------------
-        
+
         # Auxilary variables
         idx = 1 #self.number_nodes - 1
         num_of_split = 0
-        
+
         while split_bool:
             # Split node, if temperature difference is 2.0 times the temperature threshold
             if ((np.abs(self.grid[idx].get_layer_density() - self.grid[idx-1].get_layer_density()) > 10.0*threshold_density) & 
                   (np.abs(self.grid[idx].get_layer_temperature() - self.grid[idx-1].get_layer_temperature()) >= 10.0*threshold_temperature) & 
                   (self.grid[idx].get_layer_height() > 2.5*merge_snow_threshold)):
                 self.split_node(idx)
-                #idx -= 1
-                
-                idx += 1
                 num_of_split += 1
-                
+
                 # Stop merging if maximal number is reached
                 if num_of_split == split_max:
                     split_bool = False
-                
+
                 # Write splitting steps if debug level is set >= 10
                 self.logger.debug("Splitting (update_grid)....")
                 self.grid_info()
                 self.logger.debug("End splitting .... \n")
-            
-            else:
-                # Move to next layer
-                idx += 1
 
+            #idx -= 1
+
+            idx += 1
             if idx == self.number_nodes-1: #0:
                 split_bool = False
 
@@ -331,13 +328,9 @@ class Grid:
         # Convert melt (m w.e.q.) to m height
         height_diff = float(melt) / (self.get_node_density(0) / 1000.0)   # m (snow) - negative = melt
 
-        if height_diff != 0.0:
-            remove = True
-        else:
-            remove = False
-
+        remove = height_diff != 0.0
         while remove:
-               
+
             # How much energy required to melt first layer
             melt_required = self.get_node_height(0) * (self.get_node_density(0) / 1000.0)
 
@@ -463,10 +456,10 @@ class Grid:
 
     def get_temperature(self):
         """ Returns the temperature profile """
-        T = []
-        for idx in range(self.number_nodes):
-            T.append(self.grid[idx].get_layer_temperature())
-        return T
+        return [
+            self.grid[idx].get_layer_temperature()
+            for idx in range(self.number_nodes)
+        ]
 
 
 
@@ -478,10 +471,7 @@ class Grid:
 
     def get_height(self):
         """ Returns the heights of the layers """
-        hlayer = []
-        for idx in range(self.number_nodes):
-            hlayer.append(self.grid[idx].get_layer_height())
-        return hlayer
+        return [self.grid[idx].get_layer_height() for idx in range(self.number_nodes)]
 
 
 
@@ -499,10 +489,7 @@ class Grid:
         
     def get_density(self):
         """ Returns the rho profile """
-        rho = []
-        for idx in range(self.number_nodes):
-            rho.append(self.grid[idx].get_layer_density())
-        return rho
+        return [self.grid[idx].get_layer_density() for idx in range(self.number_nodes)]
 
 
 
@@ -514,10 +501,10 @@ class Grid:
         
     def get_liquid_water_content(self):
         """ Returns the rho profile """
-        LWC = []
-        for idx in range(self.number_nodes):
-            LWC.append(self.grid[idx].get_layer_liquid_water_content())
-        return LWC
+        return [
+            self.grid[idx].get_layer_liquid_water_content()
+            for idx in range(self.number_nodes)
+        ]
 
 
 
@@ -529,10 +516,10 @@ class Grid:
         
     def get_cold_content(self):
         """ Returns the cold content profile """
-        CC = []
-        for idx in range(self.number_nodes):
-            CC.append(self.grid[idx].get_layer_cold_content())
-        return CC
+        return [
+            self.grid[idx].get_layer_cold_content()
+            for idx in range(self.number_nodes)
+        ]
 
 
     
@@ -544,10 +531,9 @@ class Grid:
         
     def get_porosity(self):
         """ Returns the porosity profile """
-        por = []
-        for idx in range(self.number_nodes):
-            por.append(self.grid[idx].get_layer_porosity())
-        return por
+        return [
+            self.grid[idx].get_layer_porosity() for idx in range(self.number_nodes)
+        ]
 
 
     
@@ -559,10 +545,10 @@ class Grid:
         
     def get_max_vol_ice_content(self):
         """ Returns the volumetric ice content profile """
-        vic = []
-        for idx in range(self.number_nodes):
-            vic.append(self.grid[idx].get_layer_max_vol_ice_content())
-        return vic
+        return [
+            self.grid[idx].get_layer_max_vol_ice_content()
+            for idx in range(self.number_nodes)
+        ]
 
 
 
@@ -574,10 +560,9 @@ class Grid:
         
     def get_refreeze(self):
         """ Returns the refreezing profile """
-        ref = []
-        for idx in range(self.number_nodes):
-            ref.append(self.grid[idx].get_layer_refreeze())
-        return ref
+        return [
+            self.grid[idx].get_layer_refreeze() for idx in range(self.number_nodes)
+        ]
 
 
 

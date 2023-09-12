@@ -49,19 +49,19 @@ from dask_jobqueue import SLURMCluster
 def main():
 
     start_logging()
-    
+
     #------------------------------------------te logger with 'spam_application'
     # Create input and output dataset
     #------------------------------------------ 
     IO = IOClass()
-    DATA = IO.create_data_file() 
-    RESULT = IO.create_result_file() 
+    DATA = IO.create_data_file()
+    RESULT = IO.create_result_file()
     RESTART = IO.create_restart_file() 
 
     #----------------------------------------------
     # Calculation - Multithreading using all cores  
     #----------------------------------------------
-    
+
     # Auxiliary variables for futures
     futures = []
     nfutures = 0
@@ -72,12 +72,8 @@ def main():
     #-----------------------------------------------
     # Create a client for distributed calculations
     #-----------------------------------------------
-    if (slurm_use):
-        with SLURMCluster(scheduler_port=port_monitoring,
-                          cores=cores, processes=processes,
-                          project=project, name=name,
-                          memory=str(memory_per_process * processes) + 'GB', local_directory='dask-worker-space',
-                          job_extra=extra_slurm_parameters) as cluster:
+    if slurm_use:
+        with SLURMCluster(scheduler_port=port_monitoring, cores=cores, processes=processes, project=project, name=name, memory=f'{str(memory_per_process * processes)}GB', local_directory='dask-worker-space', job_extra=extra_slurm_parameters) as cluster:
             print(cluster.job_script())
             cluster.scale(processes * nodes)
             print("You are using SLURM!\n")
@@ -96,13 +92,16 @@ def main():
     # Write results and restart files
     timestamp = pd.to_datetime(str(IO.get_restart().time.values)).strftime('%Y-%m-%dT%H-%M-%S')
     comp = dict(zlib=True, complevel=9)
-    
+
     encoding = {var: comp for var in IO.get_result().data_vars}
     IO.get_result().to_netcdf(os.path.join(data_path,'output',output_netcdf), encoding=encoding, mode = 'w')
 
     encoding = {var: comp for var in IO.get_restart().data_vars}
-    IO.get_restart().to_netcdf(os.path.join(data_path,'restart','restart_'+timestamp+'.nc'), encoding=encoding)
-    
+    IO.get_restart().to_netcdf(
+        os.path.join(data_path, 'restart', f'restart_{timestamp}.nc'),
+        encoding=encoding,
+    )
+
     # Stop time measurement
     duration_run = datetime.now() - start_time
     duration_run_writing = datetime.now() - start_writing
